@@ -77,6 +77,12 @@
       flex-wrap: wrap;
       margin-top: 10px;
     }
+    footer {
+      text-align: center;
+      margin-top: 40px;
+      font-size: 14px;
+      color: #555;
+    }
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -110,7 +116,11 @@
     </select>
     <button id="salvarModeloBtn" style="background:#28a745;">Salvar como Modelo</button>
     <button id="carregarModeloBtn" style="background:#ffc107; color:#000;">Carregar Modelo</button>
+    <button id="duplicarModeloBtn" style="background:#6f42c1;">🌀 Duplicar Modelo</button>
     <button id="excluirModeloBtn" style="background:#dc3545;">Excluir Modelo</button>
+    <button id="exportarBtn" style="background:#20c997;">⬇️ Exportar Modelos</button>
+    <button id="importarBtn" style="background:#fd7e14;">⬆️ Importar Modelos</button>
+    <input type="file" id="importFile" accept=".json" style="display:none">
   </div>
 
   <div>
@@ -119,6 +129,8 @@
   </div>
 
   <div class="preview" id="preview"></div>
+
+  <footer>✨ Criado por <strong>CLX</strong></footer>
 
   <script>
     const nomesMeses = [
@@ -153,13 +165,11 @@
       return dias;
     }
 
-    // --- Pega os nomes das colunas digitadas ---
     function pegarColunas() {
       const inputs = document.querySelectorAll("#colunasContainer input");
       return Array.from(inputs).map(i => i.value.trim()).filter(v => v !== "");
     }
 
-    // --- Adicionar nova coluna ---
     document.getElementById("addColunaBtn").addEventListener("click", () => {
       const container = document.getElementById("colunasContainer");
       const input = document.createElement("input");
@@ -168,7 +178,6 @@
       container.appendChild(input);
     });
 
-    // --- Gerar planilha ---
     function gerarPlanilha(ano, meses, qtdAbas) {
       const colunas = pegarColunas();
       const wb = XLSX.utils.book_new();
@@ -195,7 +204,6 @@
       XLSX.writeFile(wb, `planejamento_${ano}.xlsx`);
     }
 
-    // --- Mostrar exemplo ---
     function mostrarExemplo(ano, meses) {
       const preview = document.getElementById("preview");
       preview.innerHTML = "";
@@ -225,7 +233,6 @@
       preview.innerHTML = html;
     }
 
-    // --- Sistema de Modelos ---
     const modeloSelect = document.getElementById("modeloSelect");
 
     function atualizarListaModelos() {
@@ -241,21 +248,29 @@
 
     atualizarListaModelos();
 
+    function obterModelos() {
+      return JSON.parse(localStorage.getItem("modelosColunas") || "{}");
+    }
+
+    function salvarModelos(modelos) {
+      localStorage.setItem("modelosColunas", JSON.stringify(modelos));
+      atualizarListaModelos();
+    }
+
     document.getElementById("salvarModeloBtn").addEventListener("click", () => {
       const nome = prompt("Digite o nome do modelo:");
       if (!nome) return;
       const colunas = pegarColunas();
-      const modelos = JSON.parse(localStorage.getItem("modelosColunas") || "{}");
+      const modelos = obterModelos();
       modelos[nome] = colunas;
-      localStorage.setItem("modelosColunas", JSON.stringify(modelos));
-      atualizarListaModelos();
+      salvarModelos(modelos);
       alert(`Modelo "${nome}" salvo com sucesso!`);
     });
 
     document.getElementById("carregarModeloBtn").addEventListener("click", () => {
       const nome = modeloSelect.value;
       if (!nome) return alert("Escolha um modelo para carregar!");
-      const modelos = JSON.parse(localStorage.getItem("modelosColunas") || "{}");
+      const modelos = obterModelos();
       const colunas = modelos[nome];
       const container = document.getElementById("colunasContainer");
       container.innerHTML = "";
@@ -272,11 +287,56 @@
       const nome = modeloSelect.value;
       if (!nome) return alert("Escolha um modelo para excluir!");
       if (!confirm(`Excluir modelo "${nome}"?`)) return;
-      const modelos = JSON.parse(localStorage.getItem("modelosColunas") || "{}");
+      const modelos = obterModelos();
       delete modelos[nome];
-      localStorage.setItem("modelosColunas", JSON.stringify(modelos));
-      atualizarListaModelos();
+      salvarModelos(modelos);
       alert("Modelo excluído!");
+    });
+
+    document.getElementById("duplicarModeloBtn").addEventListener("click", () => {
+      const nome = modeloSelect.value;
+      if (!nome) return alert("Escolha um modelo para duplicar!");
+      const modelos = obterModelos();
+      const colunas = modelos[nome];
+      const novoNome = prompt(`Digite o nome do novo modelo (cópia de "${nome}"):`);
+
+      if (!novoNome) return;
+      modelos[novoNome] = [...colunas];
+      salvarModelos(modelos);
+      alert(`Modelo "${novoNome}" criado com sucesso!`);
+    });
+
+    // Exportar modelos
+    document.getElementById("exportarBtn").addEventListener("click", () => {
+      const modelos = obterModelos();
+      const blob = new Blob([JSON.stringify(modelos, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "modelos_CLX.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // Importar modelos
+    const inputFile = document.getElementById("importFile");
+    document.getElementById("importarBtn").addEventListener("click", () => inputFile.click());
+    inputFile.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const novos = JSON.parse(ev.target.result);
+          const modelos = obterModelos();
+          Object.assign(modelos, novos);
+          salvarModelos(modelos);
+          alert("Modelos importados com sucesso!");
+        } catch {
+          alert("Erro ao importar o arquivo JSON!");
+        }
+      };
+      reader.readAsText(file);
     });
 
     // Botões principais
