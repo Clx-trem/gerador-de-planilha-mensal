@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -11,6 +12,7 @@
       max-width: 900px;
       margin: 40px auto;
       padding: 20px;
+      transition: 0.3s;
     }
     h1 {
       text-align: center;
@@ -82,6 +84,26 @@
       font-size: 14px;
       color: #555;
     }
+
+    /* TEMA ESCURO */
+    body.dark {
+      background: #1e1e1e;
+      color: #fff;
+    }
+    body.dark input,
+    body.dark select,
+    body.dark button {
+      background: #333;
+      color: #fff;
+      border-color: #555;
+    }
+    body.dark .preview {
+      background: #2a2a2a;
+      border-color: #555;
+    }
+    body.dark table {
+      color: #ffffff;
+    }
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -113,18 +135,28 @@
     <select id="modeloSelect">
       <option value="">-- Escolher modelo salvo --</option>
     </select>
-    <button id="salvarModeloBtn" style="background:#28a745;">Salvar como Modelo</button>
-    <button id="carregarModeloBtn" style="background:#ffc107; color:#000;">Carregar Modelo</button>
-    <button id="duplicarModeloBtn" style="background:#6f42c1;">🌀 Duplicar Modelo</button>
-    <button id="excluirModeloBtn" style="background:#dc3545;">Excluir Modelo</button>
-    <button id="exportarBtn" style="background:#20c997;">⬇️ Exportar Modelos</button>
-    <button id="importarBtn" style="background:#fd7e14;">⬆️ Importar Modelos</button>
+    <button id="salvarModeloBtn" style="background:#28a745;">Salvar Modelo</button>
+    <button id="carregarModeloBtn" style="background:#ffc107; color:#000;">Carregar</button>
+    <button id="duplicarModeloBtn" style="background:#6f42c1;">Duplicar</button>
+    <button id="excluirModeloBtn" style="background:#dc3545;">Excluir</button>
+    <button id="exportarBtn" style="background:#20c997;">⬇️ Exportar</button>
+    <button id="importarBtn" style="background:#fd7e14;">⬆️ Importar</button>
     <input type="file" id="importFile" accept=".json" style="display:none">
   </div>
 
+  <div class="modelos">
+    <button id="modeloSimplesBtn" style="background:#0d6efd;">Modelo Simples</button>
+    <button id="modeloProBtn" style="background:#6610f2;">Modelo Profissional</button>
+  </div>
+
   <div>
-    <button id="gerarBtn">Gerar Arquivo XLSX</button>
+    <button id="gerarBtn">Gerar XLSX</button>
     <button id="previewBtn" style="background:#28a745;">Ver Exemplo</button>
+    <button id="gradearBtn" style="background:#6c757d;">Gradeie</button>
+    <button id="bordasBtn" style="background:#343a40;">Bordas Excel</button>
+    <button id="congelarBtn" style="background:#198754;">Congelar Cabeçalho</button>
+    <button id="pdfBtn" style="background:#dc3545;">📄 Exportar PDF</button>
+    <button id="temaBtn" style="background:#000;">🌙 Tema Escuro</button>
   </div>
 
   <div class="preview" id="preview"></div>
@@ -137,7 +169,6 @@
       "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"
     ];
 
-    // Cria checkboxes dos meses
     const mesesDiv = document.getElementById("meses");
     nomesMeses.forEach((m, i) => {
       const lbl = document.createElement("label");
@@ -173,10 +204,200 @@
       const container = document.getElementById("colunasContainer");
       const input = document.createElement("input");
       input.type = "text";
-      input.placeholder = "Nome da nova coluna";
+      input.placeholder = "Nova coluna";
       container.appendChild(input);
     });
 
+    /* BOTÕES DE MODELO */
+    function atualizarListaModelos() {
+      modeloSelect.innerHTML = `<option value="">-- Escolher modelo salvo --</option>`;
+      const modelos = JSON.parse(localStorage.getItem("modelosColunas") || "{}");
+      for (const nome in modelos) {
+        const opt = document.createElement("option");
+        opt.value = nome;
+        opt.textContent = nome;
+        modeloSelect.appendChild(opt);
+      }
+    }
+    atualizarListaModelos();
+
+    function obterModelos() {
+      return JSON.parse(localStorage.getItem("modelosColunas") || "{}");
+    }
+
+    function salvarModelos(modelos) {
+      localStorage.setItem("modelosColunas", JSON.stringify(modelos));
+      atualizarListaModelos();
+    }
+
+    document.getElementById("salvarModeloBtn").addEventListener("click", () => {
+      const nome = prompt("Nome do modelo:");
+      if (!nome) return;
+
+      const colunas = pegarColunas();
+      const modelos = obterModelos();
+      modelos[nome] = colunas;
+      salvarModelos(modelos);
+
+      alert("Modelo salvo!");
+    });
+
+    document.getElementById("carregarModeloBtn").addEventListener("click", () => {
+      const nome = modeloSelect.value;
+      if (!nome) return alert("Selecione um modelo");
+
+      const modelos = obterModelos();
+      const colunas = modelos[nome];
+
+      const container = document.getElementById("colunasContainer");
+      container.innerHTML = "";
+      colunas.forEach(c => {
+        const input = document.createElement("input");
+        input.type = "text";
+        input.value = c;
+        container.appendChild(input);
+      });
+
+      alert("Modelo carregado!");
+    });
+
+    document.getElementById("duplicarModeloBtn").addEventListener("click", () => {
+      const nome = modeloSelect.value;
+      if (!nome) return alert("Escolha um modelo");
+
+      const novo = prompt("Novo nome da cópia:");
+      if (!novo) return;
+
+      const modelos = obterModelos();
+      modelos[novo] = [...modelos[nome]];
+      salvarModelos(modelos);
+
+      alert("Modelo duplicado!");
+    });
+
+    document.getElementById("excluirModeloBtn").addEventListener("click", () => {
+      const nome = modeloSelect.value;
+      if (!nome) return alert("Selecione um modelo");
+
+      if (!confirm(`Excluir modelo ${nome}?`)) return;
+
+      const modelos = obterModelos();
+      delete modelos[nome];
+      salvarModelos(modelos);
+
+      alert("Modelo excluído!");
+    });
+
+    document.getElementById("exportarBtn").addEventListener("click", () => {
+      const modelos = obterModelos();
+      const blob = new Blob([JSON.stringify(modelos, null, 2)], { type: "application/json" });
+
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "modelos_CLX.json";
+      a.click();
+    });
+
+    const inputFile = document.getElementById("importFile");
+    document.getElementById("importarBtn").addEventListener("click", () => inputFile.click());
+    inputFile.addEventListener("change", e => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const novos = JSON.parse(ev.target.result);
+          const modelos = obterModelos();
+          Object.assign(modelos, novos);
+          salvarModelos(modelos);
+          alert("Importado!");
+        } catch {
+          alert("Erro ao importar JSON");
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    /* MODELOS PADRÃO */
+    document.getElementById("modeloSimplesBtn").addEventListener("click", () => {
+      const container = document.getElementById("colunasContainer");
+      container.innerHTML = "";
+
+      ["Data", "Dia da Semana", "Descrição"].forEach(c => {
+        const inp = document.createElement("input");
+        inp.type = "text";
+        inp.value = c;
+        container.appendChild(inp);
+      });
+
+      alert("Modelo Simples carregado!");
+    });
+
+    document.getElementById("modeloProBtn").addEventListener("click", () => {
+      const container = document.getElementById("colunasContainer");
+      container.innerHTML = "";
+
+      [
+        "Data","Dia da Semana","Atividade","Responsável",
+        "Setor","Status","Observações"
+      ].forEach(c => {
+        const inp = document.createElement("input");
+        inp.type = "text";
+        inp.value = c;
+        container.appendChild(inp);
+      });
+
+      alert("Modelo Profissional carregado!");
+    });
+
+    /* AJUSTE COLUNAS */
+    function autoAjustarColunas(ws, colunas) {
+      ws['!cols'] = colunas.map(c => ({
+        wch: Math.max(12, c.length + 2)
+      }));
+    }
+
+    /* BORDAS */
+    let aplicarBordas = false;
+
+    document.getElementById("bordasBtn").addEventListener("click", () => {
+      aplicarBordas = !aplicarBordas;
+      alert(aplicarBordas ? "Bordas ativadas!" : "Bordas desativadas!");
+    });
+
+    function aplicarBordasNaPlanilha(ws) {
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      for (let R = range.s.r; R <= range.e.r; R++) {
+        for (let C = range.s.c; C <= range.e.c; C++) {
+          const cell = XLSX.utils.encode_cell({ r: R, c: C });
+          if (!ws[cell]) continue;
+
+          ws[cell].s = {
+            border: {
+              top: { style: "thin", color: { rgb: "000000" } },
+              bottom: { style: "thin", color: { rgb: "000000" } },
+              left: { style: "thin", color: { rgb: "000000" } },
+              right: { style: "thin", color: { rgb: "000000" } }
+            }
+          };
+        }
+      }
+    }
+
+    /* CONGELAR CABEÇALHO */
+    let congelarCabecalho = false;
+
+    document.getElementById("congelarBtn").addEventListener("click", () => {
+      congelarCabecalho = !congelarCabecalho;
+      alert(congelarCabecalho ? "Cabeçalho congelado!" : "Desativado");
+    });
+
+    function congelarLinha(ws) {
+      ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+    }
+
+    /* GERAR XLSX */
     function gerarPlanilha(ano, meses, qtdAbas) {
       const colunas = pegarColunas();
       const wb = XLSX.utils.book_new();
@@ -197,12 +418,41 @@
         });
 
         const ws = XLSX.utils.aoa_to_sheet(dados);
+
+        autoAjustarColunas(ws, colunas);
+        if (aplicarBordas) aplicarBordasNaPlanilha(ws);
+        if (congelarCabecalho) congelarLinha(ws);
+
         XLSX.utils.book_append_sheet(wb, ws, nomesMeses[mes]);
       }
 
       XLSX.writeFile(wb, `planejamento_${ano}.xlsx`);
     }
 
+    /* PDF */
+    document.getElementById("pdfBtn").addEventListener("click", () => {
+      const preview = document.getElementById("preview").innerHTML;
+
+      if (!preview.trim()) return alert("Clique em Ver Exemplo primeiro!");
+
+      const w = window.open("", "_blank");
+      w.document.write(`
+        <html>
+          <head>
+            <title>PDF - CLX</title>
+            <style>
+              table { width: 100%; border-collapse: collapse; }
+              th, td { border: 1px solid #000; padding: 8px; }
+              th { background: #eee; }
+            </style>
+          </head>
+          <body>${preview}</body>
+        </html>
+      `);
+      w.document.close();
+      w.print();
+    });
+    /* PREVIEW */
     function mostrarExemplo(ano, meses) {
       const preview = document.getElementById("preview");
       preview.innerHTML = "";
@@ -210,15 +460,12 @@
         preview.innerHTML = "<p style='color:red'>Selecione pelo menos um mês!</p>";
         return;
       }
-
       const colunas = pegarColunas();
       const mes = meses[0];
       const dias = gerarDias(ano, mes);
-
       let html = `<h3>${nomesMeses[mes]} ${ano}</h3><table><tr>`;
       colunas.forEach(c => html += `<th>${c}</th>`);
       html += `</tr>`;
-
       dias.slice(0, 10).forEach(d => {
         html += "<tr>";
         colunas.forEach(col => {
@@ -228,125 +475,34 @@
         });
         html += "</tr>";
       });
-      html += "</table><p><em>Mostrando os 10 primeiros dias...</em></p>";
+      html += "</table><p><em>Mostrando primeiros 10 dias…</em></p>";
       preview.innerHTML = html;
     }
-
-    const modeloSelect = document.getElementById("modeloSelect");
-
-    function atualizarListaModelos() {
-      modeloSelect.innerHTML = `<option value="">-- Escolher modelo salvo --</option>`;
-      const modelos = JSON.parse(localStorage.getItem("modelosColunas") || "{}");
-      for (const nome in modelos) {
-        const opt = document.createElement("option");
-        opt.value = nome;
-        opt.textContent = nome;
-        modeloSelect.appendChild(opt);
-      }
-    }
-
-    atualizarListaModelos();
-
-    function obterModelos() {
-      return JSON.parse(localStorage.getItem("modelosColunas") || "{}");
-    }
-
-    function salvarModelos(modelos) {
-      localStorage.setItem("modelosColunas", JSON.stringify(modelos));
-      atualizarListaModelos();
-    }
-
-    document.getElementById("salvarModeloBtn").addEventListener("click", () => {
-      const nome = prompt("Digite o nome do modelo:");
-      if (!nome) return;
-      const colunas = pegarColunas();
-      const modelos = obterModelos();
-      modelos[nome] = colunas;
-      salvarModelos(modelos);
-      alert(`Modelo "${nome}" salvo com sucesso!`);
-    });
-
-    document.getElementById("carregarModeloBtn").addEventListener("click", () => {
-      const nome = modeloSelect.value;
-      if (!nome) return alert("Escolha um modelo para carregar!");
-      const modelos = obterModelos();
-      const colunas = modelos[nome];
-      const container = document.getElementById("colunasContainer");
-      container.innerHTML = "";
-      colunas.forEach(c => {
-        const input = document.createElement("input");
-        input.type = "text";
-        input.value = c;
-        container.appendChild(input);
+    document.getElementById("gradearBtn").addEventListener("click", () => {
+      const tabela = document.querySelector("#preview table");
+      if (!tabela) return alert("Clique em Ver Exemplo primeiro!");
+      tabela.style.border = "2px solid black";
+      tabela.querySelectorAll("td, th").forEach(c => {
+        c.style.border = "1px solid black";
       });
-      alert(`Modelo "${nome}" carregado!`);
+      alert("Grade aplicada!");
     });
-
-    document.getElementById("excluirModeloBtn").addEventListener("click", () => {
-      const nome = modeloSelect.value;
-      if (!nome) return alert("Escolha um modelo para excluir!");
-      if (!confirm(`Excluir modelo "${nome}"?`)) return;
-      const modelos = obterModelos();
-      delete modelos[nome];
-      salvarModelos(modelos);
-      alert("Modelo excluído!");
+    /* TEMA ESCURO */
+    let darkMode = false;
+    document.getElementById("temaBtn").addEventListener("click", () => {
+      darkMode = !darkMode;
+      document.body.classList.toggle("dark", darkMode);
+      document.getElementById("temaBtn").textContent =
+        darkMode ? "☀️ Tema Claro" : "🌙 Tema Escuro";
     });
-
-    document.getElementById("duplicarModeloBtn").addEventListener("click", () => {
-      const nome = modeloSelect.value;
-      if (!nome) return alert("Escolha um modelo para duplicar!");
-      const modelos = obterModelos();
-      const colunas = modelos[nome];
-      const novoNome = prompt(`Digite o nome do novo modelo (cópia de "${nome}"):`);
-
-      if (!novoNome) return;
-      modelos[novoNome] = [...colunas];
-      salvarModelos(modelos);
-      alert(`Modelo "${novoNome}" criado com sucesso!`);
-    });
-
-    // Exportar modelos
-    document.getElementById("exportarBtn").addEventListener("click", () => {
-      const modelos = obterModelos();
-      const blob = new Blob([JSON.stringify(modelos, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "modelos_CLX.json";
-      a.click();
-      URL.revokeObjectURL(url);
-    });
-
-    // Importar modelos
-    const inputFile = document.getElementById("importFile");
-    document.getElementById("importarBtn").addEventListener("click", () => inputFile.click());
-    inputFile.addEventListener("change", (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        try {
-          const novos = JSON.parse(ev.target.result);
-          const modelos = obterModelos();
-          Object.assign(modelos, novos);
-          salvarModelos(modelos);
-          alert("Modelos importados com sucesso!");
-        } catch {
-          alert("Erro ao importar o arquivo JSON!");
-        }
-      };
-      reader.readAsText(file);
-    });
-
-    // Botões principais
+    /* BOTÕES PRINCIPAIS */
     document.getElementById("gerarBtn").addEventListener("click", () => {
       const ano = parseInt(document.getElementById("ano").value);
       const meses = mesesSelecionados();
       const qtdAbas = parseInt(document.getElementById("qtdAbas").value);
-      if (meses.length === 0) return alert("Selecione pelo menos um mês!");
+      if (meses.length === 0) return alert("Selecione um mês!");
       gerarPlanilha(ano, meses, qtdAbas);
     });
-
     document.getElementById("previewBtn").addEventListener("click", () => {
       const ano = parseInt(document.getElementById("ano").value);
       const meses = mesesSelecionados();
