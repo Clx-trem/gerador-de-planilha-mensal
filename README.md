@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -40,7 +41,7 @@
     .preview { margin-top:18px; background:#fff; padding:12px; border:1px solid #e2e8f0; border-radius:10px; }
     table { width:100%; border-collapse:collapse; margin-top:8px; }
     th, td { border:1px solid #d1d5db; padding:8px; font-size:14px; text-align:left; }
-    th { background:#f1f5f9; }
+    th { background:#f1f5f9; font-weight:700; }
     #colunasContainer input { display:block; width:100%; margin-top:6px; }
     .modelos { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:10px; }
     footer { text-align:center; margin-top:28px; font-size:13px; color:#555; }
@@ -65,8 +66,8 @@
     }
   </style>
 
-  <!-- XLSX com suporte a estilos (full) -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- usar xlsx-js-style que suporta estilos -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js"></script>
 </head>
 <body>
   <h1>📅 Gerador de Planilha Personalizada — CLX</h1>
@@ -249,36 +250,65 @@
       alert("Modelo Profissional carregado!");
     });
 
-    /* ---------- Estilos e utilitários XLSX ---------- */
-    function autoAjustarColunas(ws, colunas){
-      ws['!cols'] = colunas.map(c => ({ wch: Math.max(12, c.length + 2) }));
+    /* ---------- Estilos e utilitários XLSX (usando xlsx-js-style) ---------- */
+
+    function calcularLarguras(dados) {
+      // dados: array de arrays (AoA)
+      const maxCol = dados[0] ? dados[0].length : 0;
+      const larg = new Array(maxCol).fill(0);
+      dados.forEach(row => {
+        for (let c = 0; c < maxCol; c++) {
+          const val = row[c] == null ? "" : String(row[c]);
+          // peso: caracteres + um buffer
+          const tamanho = val.length;
+          if (tamanho > larg[c]) larg[c] = tamanho;
+        }
+      });
+      // map para wch aproximado (caracteres)
+      return larg.map(x => ({ wch: Math.max(10, Math.min(40, x + 3)) }));
     }
 
-    function aplicarBordasNaPlanilha(ws){
-      if(!ws['!ref']) return;
+    function aplicarEstilosEbordas(ws, dados) {
+      // dados usado para identificar header row
+      if (!ws['!ref']) return;
       const range = XLSX.utils.decode_range(ws['!ref']);
-      for(let R = range.s.r; R <= range.e.r; R++){
-        for(let C = range.s.c; C <= range.e.c; C++){
+      const headerRow = range.s.r; // geralmente 0
+      // aplicar estilo por célula
+      for (let R = range.s.r; R <= range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
           const addr = XLSX.utils.encode_cell({ r: R, c: C });
-          if(!ws[addr]) continue;
-          // preservar estilo existente se houver
-          ws[addr].s = Object.assign({}, ws[addr].s || {}, {
-            border: {
-              top: { style:"thin", color:{ rgb:"000000" } },
-              bottom: { style:"thin", color:{ rgb:"000000" } },
-              left: { style:"thin", color:{ rgb:"000000" } },
-              right: { style:"thin", color:{ rgb:"000000" } }
-            }
-          });
+          const cell = ws[addr];
+          if (!cell) continue;
+          // se header
+          if (R === headerRow) {
+            cell.s = Object.assign({}, cell.s || {}, {
+              font: { bold: true },
+              fill: { patternType: "solid", fgColor: { rgb: "FFD9D9D9" } }, // cinza claro
+              alignment: { vertical: "center", horizontal: "center" },
+              border: {
+                bottom: { style: "thin", color: { rgb: "FF000000" } } // linha inferior
+              }
+            });
+          } else {
+            // corpo: bordas apenas
+            cell.s = Object.assign({}, cell.s || {}, {
+              border: {
+                top: { style: "thin", color: { rgb: "FF000000" } },
+                bottom: { style: "thin", color: { rgb: "FF000000" } },
+                left: { style: "thin", color: { rgb: "FF000000" } },
+                right: { style: "thin", color: { rgb: "FF000000" } }
+              },
+              alignment: { vertical: "center", horizontal: "left" }
+            });
+          }
         }
       }
     }
 
-    function congelarPrimeiraLinha(ws){
-      // nota: XLSX pode aceitar ws['!freeze'] ou ws['!pane'] dependendo da versão;
-      // vamos setar ambos para maior compatibilidade:
-      ws['!freeze'] = { xSplit: 0, ySplit: 1 };
-      ws['!pane'] = { xSplit: 0, ySplit: 1, activePane: "bottomLeft", frozen: true };
+    function congelarPrimeiraLinha(ws) {
+      // compatibilidade: definimos ambas as propriedades
+      ws['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: "A2" };
+      ws['!pane'] = { xSplit: 0, ySplit: 1, topLeftCell: "A2", activePane: "bottomLeft", state: "frozen" };
     }
 
     /* Flags controláveis por botões */
@@ -330,15 +360,40 @@
 
         const ws = XLSX.utils.aoa_to_sheet(dados);
 
-        // aplicar ajustes e estilos antes de adicionar a workbook
-        autoAjustarColunas(ws, colunas);
-        if(aplicarBordasFlag) aplicarBordasNaPlanilha(ws);
-        if(congelarCabecalhoFlag) congelarPrimeiraLinha(ws);
+        // auto-ajustar largura com base no conteúdo
+        ws['!cols'] = calcularLarguras(dados);
+
+        // aplicar estilos/bordas conforme flags (nota: aplicarEstilosEbordas aplica header style + bordas no corpo)
+        if (aplicarBordasFlag || congelarCabecalhoFlag) {
+          // sempre aplicar estilo do cabeçalho (visual) mesmo que bordasFlag=false ?
+          // aplicamos estilos se qualquer flag estiver ligado, mas header styling é independente:
+          aplicarEstilosEbordas(ws, dados);
+        } else {
+          // mesmo sem flags, aplicar header visual (sem bordas) para consistência
+          // aplicar apenas header style
+          if (ws['!ref']) {
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            const headerRow = range.s.r;
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+              const addr = XLSX.utils.encode_cell({ r: headerRow, c: C });
+              if (!ws[addr]) continue;
+              ws[addr].s = Object.assign({}, ws[addr].s || {}, {
+                font: { bold: true },
+                fill: { patternType: "solid", fgColor: { rgb: "FFD9D9D9" } },
+                alignment: { vertical: "center", horizontal: "center" },
+                border: { bottom: { style: "thin", color: { rgb: "FF000000" } } }
+              });
+            }
+          }
+        }
+
+        // congelar se a flag estiver ligada
+        if (congelarCabecalhoFlag) congelarPrimeiraLinha(ws);
 
         XLSX.utils.book_append_sheet(wb, ws, nomesMeses[mes].substring(0,31)); // nomes limitados a 31 chars
       }
 
-      // salvar arquivo
+      // salvar arquivo (xlsx-js-style mantém XLSX global com writeFile)
       XLSX.writeFile(wb, `planejamento_${ano}.xlsx`);
       alert("Arquivo XLSX gerado!");
     }
@@ -378,7 +433,8 @@
       const tabela = document.querySelector("#previewTable");
       if(!tabela) return alert("Clique em 'Ver Exemplo' antes de aplicar a grade.");
       tabela.style.border = "2px solid #000";
-      tabela.querySelectorAll("th, td").forEach(c => { c.style.border = "1px solid #000"; c.style.padding = "6px"; });
+      tabela.querySelectorAll("th").forEach(th => { th.style.border = "1px solid #000"; th.style.padding = "6px"; th.style.background = "#eee"; });
+      tabela.querySelectorAll("td").forEach(td => { td.style.border = "1px solid #000"; td.style.padding = "6px"; });
       alert("Grade aplicada no preview!");
     });
 
