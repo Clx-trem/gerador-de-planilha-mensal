@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -218,5 +219,102 @@
   }
 </script>
 
+  <!-- BOTÃO ENGRENAGEM (ADMIN) -->
+  <div id="adminGear" style="position: fixed; bottom: 20px; right: 20px; cursor: pointer; display:none; z-index:9999;">
+    ⚙️
+  </div>
+
+  <script>
+    // Mostrar engrenagem só para admin CLX
+    const savedUser = localStorage.getItem('logado');
+    if (savedUser === 'CLX') {
+      document.getElementById('adminGear').style.display = 'block';
+    }
+
+    // Abrir painel admin ao clicar
+    document.getElementById('adminGear').onclick = () => {
+      alert('Painel do administrador — aqui você vai gerenciar usuários.');
+    };
+  </script>
+  <!-- PAINEL ADMIN (JANELA) -->
+  <div id="adminPanel" style="position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); display:none; justify-content:center; align-items:center; z-index:99999;">
+    <div style="width:420px; background:#0d0d0f; padding:20px; border-radius:20px; box-shadow:0 0 20px #00eaff; color:white; font-family:Arial; animation: pop 0.3s ease;">
+      <h2 style="text-align:center; color:#00eaff;">⚙️ Painel Administrativo</h2>
+      <h3>Usuários cadastrados</h3>
+      <div id="userList" style="max-height:200px; overflow-y:auto; padding:10px; border:1px solid #00eaff; border-radius:10px; margin-bottom:20px;"></div>
+      <h3>Adicionar Usuário</h3>
+      <input id="newUser" placeholder="Usuário" style="width:100%; padding:8px; border-radius:8px; margin-bottom:8px;">
+      <input id="newPass" placeholder="Senha" style="width:100%; padding:8px; border-radius:8px; margin-bottom:8px;">
+      <button onclick="addUser()" style="width:100%; padding:10px; background:#00eaff; color:black; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">Adicionar</button>
+      <button onclick="closePanel()" style="width:100%; padding:10px; background:#ff0044; color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer; margin-top:15px;">Fechar</button>
+    </div>
+  </div>
+
+  <style>
+    @keyframes pop{
+      from{transform:scale(0.6); opacity:0;} to{transform:scale(1); opacity:1;}
+    }
+    body { background: #ffffff !important; color: black !important; }
+  </style>
+
+  <script>
+    let usuarios = JSON.parse(localStorage.getItem('usuariosCLX') || '{}');
+
+    function salvarUsuarios(){ localStorage.setItem('usuariosCLX', JSON.stringify(usuarios)); }
+
+    function renderUsers(){
+      const box = document.getElementById('userList');
+      box.innerHTML = '';
+      Object.keys(usuarios).forEach(u => {
+        const item = document.createElement('div');
+        item.style.marginBottom = '10px';
+        item.innerHTML = `
+          <div style="padding:10px; border-radius:10px; background:#001f29; border:1px solid #00eaff; display:flex; justify-content:space-between; align-items:center;">
+            <strong>${u}</strong>
+            <div style="display:flex; gap:10px;">
+              <button onclick="editPass('${u}')" style="cursor:pointer;">✏️</button>
+              <button onclick="toggleBlock('${u}')" style="cursor:pointer;">${usuarios[u].bloqueado ? '🔓' : '🔒'}</button>
+              <button onclick="deleteUser('${u}')" style="cursor:pointer;">❌</button>
+            </div>
+          </div>`;
+        box.appendChild(item);
+      });
+    }
+
+    function addUser(){
+      const u = document.getElementById('newUser').value.trim();
+      const p = document.getElementById('newPass').value.trim();
+      if(!u || !p) return alert('Usuário e senha necessários');
+      usuarios[u] = { senha:p, bloqueado:false };
+      salvarUsuarios(); renderUsers();
+      document.getElementById('newUser').value = '';
+      document.getElementById('newPass').value = '';
+    }
+
+    function editPass(user){
+      const nova = prompt('Nova senha para ' + user);
+      if(!nova) return;
+      usuarios[user].senha = nova;
+      salvarUsuarios(); renderUsers();
+    }
+
+    function toggleBlock(user){
+      usuarios[user].bloqueado = !usuarios[user].bloqueado;
+      salvarUsuarios(); renderUsers();
+    }
+
+    function deleteUser(user){
+      if(!confirm('Excluir usuário ' + user + '?')) return;
+      delete usuarios[user]; salvarUsuarios(); renderUsers();
+    }
+
+    document.getElementById('adminGear').onclick = () => {
+      document.getElementById('adminPanel').style.display = 'flex';
+      renderUsers();
+    };
+
+    function closePanel(){ document.getElementById('adminPanel').style.display = 'none'; }
+
+  </script>
 </body>
 </html>
