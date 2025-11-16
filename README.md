@@ -1,136 +1,85 @@
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Gerador de Planilha Personalizada - CLX</title>
 
   <style>
-    /* ========== LOGIN / ADMIN (NEON) ========== */
-    :root{ --neon: #00eaff; }
-    body.login-active { overflow: hidden; background:#03040a; color:#fff; }
+    /* ---------- LOGIN / ADMIN (NEON) ---------- */
+    :root{ --neon:#00eaff; --bg:#03040a; --white:#ffffff; }
+    body.login-active { overflow:hidden; background:var(--bg); color:var(--white); }
 
-    /* login overlay */
     #clxLoginOverlay{
       position:fixed; inset:0;
+      display:flex; align-items:center; justify-content:center;
       background: linear-gradient(135deg, rgba(2,6,23,0.95), rgba(4,10,30,0.95));
-      display:flex; align-items:center; justify-content:center; z-index:99999;
-      font-family: Arial, Helvetica, sans-serif; color: white;
+      z-index:99999; font-family:Arial,Helvetica,sans-serif;
     }
     #clxLoginCard{
-      width:360px; background:linear-gradient(180deg, #071223, #081426);
-      border-radius:12px; padding:22px; box-shadow:0 8px 40px rgba(0,160,255,0.12);
-      border:1px solid rgba(0,160,255,0.14); animation:clx-pop .28s ease;
+      width:360px; border-radius:12px; padding:20px;
+      background: linear-gradient(180deg,#071223,#081426);
+      box-shadow:0 12px 40px rgba(0,160,255,0.12);
+      border:1px solid rgba(0,160,255,0.12);
     }
-    @keyframes clx-pop{ from { transform: translateY(8px) scale(.98); opacity:0 } to { transform: translateY(0) scale(1); opacity:1 } }
-    #clxLoginCard h2{ color: var(--neon); margin:0 0 12px; text-shadow:0 0 6px rgba(0,234,255,0.5); }
-    #clxLoginCard input{ width:100%; padding:10px; margin-top:8px; border-radius:8px; background:#06111a; border:1px solid rgba(255,255,255,0.06); color:#e6f7ff; outline:none; }
-    #clxLoginCard button{ width:100%; padding:10px; margin-top:12px; border-radius:8px; border:none; cursor:pointer; background:var(--neon); color:#00202a; font-weight:700; box-shadow:0 6px 18px rgba(0,160,255,0.12); }
+    #clxLoginCard h2{ color:var(--neon); margin:0 0 12px; text-shadow:0 0 6px rgba(0,234,255,0.45); }
+    #clxLoginCard input{ width:100%; padding:10px; margin-top:8px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); background:#05111a; color:#e6f7ff; outline:none; }
+    #clxLoginCard button{ width:100%; padding:10px; margin-top:12px; border-radius:8px; border:none; cursor:pointer; background:var(--neon); color:#00202a; font-weight:700; }
 
-    /* admin gear (top-right) */
-    #clxGear{
-      position:fixed; top:18px; right:18px; font-size:28px; cursor:pointer; display:none; z-index:99990;
-      filter:drop-shadow(0 0 10px rgba(0,234,255,0.6)); transition:transform .18s;
-    }
-    #clxGear:hover{ transform:rotate(20deg) scale(1.06); }
+    #clxGear{ position:fixed; top:18px; right:18px; font-size:28px; cursor:pointer; display:none; z-index:99990; filter:drop-shadow(0 0 10px rgba(0,234,255,0.6)); }
+    #clxGear:hover{ transform:rotate(20deg) scale(1.06); transition:.18s; }
+
+    #clxLogoutBtn{ position:fixed; left:18px; top:18px; padding:8px 12px; border-radius:8px; border:none; cursor:pointer; background:#ff3747; color:white; z-index:99990; display:none; }
 
     /* admin modal */
-    #clxAdminModal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:99998; background: rgba(0,0,0,0.45); backdrop-filter: blur(4px); }
-    #clxAdminCard{
-      width:420px; border-radius:14px; padding:18px; background: linear-gradient(180deg,#071126,#06111a);
-      border:1px solid rgba(0,160,255,0.13); box-shadow:0 12px 40px rgba(0,160,255,0.08); color:white; animation:clx-pop .25s ease;
-    }
+    #clxAdminModal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.45); z-index:99998; }
+    #clxAdminCard{ width:420px; border-radius:12px; padding:16px; background:linear-gradient(180deg,#071126,#06111a); color:white; border:1px solid rgba(0,160,255,0.12); box-shadow:0 12px 40px rgba(0,160,255,0.08); }
     #clxAdminCard h3{ color:var(--neon); margin:0 0 10px; }
     #clxAdminCard input{ width:100%; padding:8px; margin:6px 0; border-radius:8px; border:1px solid rgba(255,255,255,0.06); background:#05111a; color:#e6f7ff; }
+
     .clxUserRow{ display:flex; gap:8px; align-items:center; justify-content:space-between; padding:8px; border-radius:8px; background:rgba(0,0,0,0.12); margin-bottom:8px; border:1px solid rgba(0,160,255,0.04); }
     .clxUserRow.blocked{ opacity:.45; text-decoration:line-through; color:#ff9b9b; }
     .clxBtn{ padding:6px 10px; border-radius:6px; border:none; cursor:pointer; font-weight:600; }
-    .clxBtn.delete{ background:#ff3747; color:white; }
-    .clxBtn.block{ background:#ffaa00; color:#08111a; }
+    .clxBtn.delete{ background:#ff3747;color:white; }
+    .clxBtn.block{ background:#ffaa00;color:#08111a; }
     .clxBtn.edit{ background:var(--neon); color:#021214; }
 
-    /* logout button */
-    #clxLogoutBtn{
-      position:fixed; left:18px; top:18px; padding:8px 12px; border-radius:8px; border:none; cursor:pointer;
-      background:#ff3747; color:white; z-index:99990; display:none;
-    }
-
-    /* small adjustments */
-    html,body { height:100%; margin:0; }
-    /* ========== END LOGIN / ADMIN ========== */
-
-    /* ===================== SEU CSS ORIGINAL ===================== */
-    /* TEMA A - Elegante (cinza + azul neon) */
+    /* ---------- YOUR ORIGINAL SITE CSS (kept) ---------- */
     :root{
-      --bg: #0d1117;
-      --card: #161b22;
-      --muted: #94a3b8;
-      --accent: #238636;
-      --accent-2: #0ea5e9;
-      --white: #ffffff;
-      --input-bg: #0f1720;
-      --border: #26303a;
-      --shadow: rgba(0,0,0,0.6);
+      --site-bg:#f8fafc; --site-text:#0b1220; --accent:#238636; --accent-2:#0ea5e9;
     }
-    /* Estilo base (tema claro por padrão) */
-    body.site-visible {
-      font-family: Arial, sans-serif;
-      background: #f8fafc;
-      color: #0b1220;
-      max-width: 1000px;
-      margin: 28px auto;
-      padding: 20px;
-      transition: background 0.25s, color 0.25s;
-    }
-    h1 { text-align:center; margin-bottom:18px; }
-    label { display:block; margin-top:10px; font-weight:700; color:inherit; }
-    input, select, button, textarea {
-      padding:8px; border-radius:6px; border:1px solid #cbd5e1; margin-top:6px;
-      background: #fff; color: inherit;
-    }
-    button { cursor:pointer; background: var(--accent); color:#fff; border:none; margin-top:12px; margin-right:8px; }
-    button:hover { filter:brightness(0.95); }
-    .months { display:grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap:6px; margin-top:6px; }
-    .preview { margin-top:18px; background:#fff; padding:12px; border:1px solid #e2e8f0; border-radius:10px; }
-    table { width:100%; border-collapse:collapse; margin-top:8px; }
-    th, td { border:1px solid #d1d5db; padding:8px; font-size:14px; text-align:left; }
-    th { background:#f1f5f9; font-weight:700; }
-    #colunasContainer input { display:block; width:100%; margin-top:6px; }
-    .modelos { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:10px; }
-    footer { text-align:center; margin-top:28px; font-size:13px; color:#555; }
-    /* Tema escuro */
-    body.dark { background: var(--bg); color: var(--white); }
-    body.dark .preview { background: var(--card); border-color: var(--border); box-shadow: 0 6px 18px var(--shadow); }
-    body.dark input, body.dark select, body.dark textarea { background: var(--input-bg); color: var(--white); border:1px solid var(--border); }
-    body.dark th { background: rgba(255,255,255,0.04); }
-    body.dark table { color: var(--white); }
-    body.dark button { background: var(--accent); color: #fff; border:none; }
-    @media (max-width:700px){
-      .months { grid-template-columns: repeat(2, 1fr); }
-      body.site-visible { padding:14px; margin:12px; }
-    }
-    /* ===================== END SEU CSS ORIGINAL ===================== */
+    body.site-visible { font-family:Arial, sans-serif; background:var(--site-bg); color:var(--site-text); max-width:1000px; margin:28px auto; padding:20px; transition:background .25s, color .25s; }
+    h1{text-align:center;margin-bottom:18px;}
+    label{display:block;margin-top:10px;font-weight:700;color:inherit;}
+    input, select, button, textarea{ padding:8px;border-radius:6px;border:1px solid #cbd5e1;margin-top:6px;background:#fff;color:inherit; }
+    .months{ display:grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); gap:6px; margin-top:6px; }
+    .preview{ margin-top:18px; background:#fff; padding:12px; border:1px solid #e2e8f0; border-radius:10px; }
+    table{ width:100%; border-collapse:collapse; margin-top:8px; }
+    th,td{ border:1px solid #d1d5db; padding:8px; font-size:14px; text-align:left; }
+    th{ background:#f1f5f9; font-weight:700; }
+    footer{ text-align:center; margin-top:28px; font-size:13px; color:#555; }
+
+    @media(max-width:700px){ .months{ grid-template-columns: repeat(2,1fr); } body.site-visible{ padding:14px; margin:12px; } }
   </style>
 
-  <!-- usar xlsx-js-style que suporta estilos -->
+  <!-- xlsx lib -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js"></script>
 </head>
 <body class="login-active">
 
-  <!-- LOGIN OVERLAY -->
+  <!-- LOGIN OVERLAY (MANDATORY) -->
   <div id="clxLoginOverlay">
     <div id="clxLoginCard">
       <h2>CLX — Acesso</h2>
-      <input id="clxUserInput" placeholder="Usuário (ex: CLX)">
-      <input id="clxPassInput" type="password" placeholder="Senha">
-      <label style="display:flex; gap:8px; align-items:center; margin-top:8px;">
-        <input id="clxRemember" type="checkbox"> Lembrar login
-      </label>
+      <input id="clxUserInput" placeholder="Usuário (ex: CLX)" />
+      <input id="clxPassInput" type="password" placeholder="Senha" />
+      <label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input id="clxRemember" type="checkbox"> Lembrar login</label>
       <button id="clxLoginBtn">Entrar</button>
-      <p id="clxLoginError" style="color:#ff8b8b; margin-top:10px; display:none;">Usuário ou senha incorretos.</p>
+      <p id="clxLoginError" style="color:#ff8b8b;margin-top:8px;display:none;">Usuário ou senha incorretos.</p>
     </div>
   </div>
 
-  <!-- GEAR + LOGOUT -->
+  <!-- Gear + Logout (appear only after login & gear only for admin) -->
   <div id="clxGear">⚙️</div>
   <button id="clxLogoutBtn" onclick="clxLogout()">Sair</button>
 
@@ -138,37 +87,40 @@
   <div id="clxAdminModal">
     <div id="clxAdminCard">
       <h3>Painel Administrativo</h3>
-      <div>
-        <strong>Usuários cadastrados</strong>
+      <div><strong>Usuários cadastrados</strong>
         <div id="clxUserList" style="margin-top:8px; max-height:220px; overflow:auto;"></div>
       </div>
-      <hr style="border-color:rgba(255,255,255,0.06); margin:12px 0;">
+      <hr style="border-color:rgba(255,255,255,0.06);margin:10px 0;">
       <div>
         <strong>Adicionar usuário</strong>
         <input id="clxNewUser" placeholder="Usuário">
         <input id="clxNewPass" placeholder="Senha">
-        <button class="clxBtn" id="clxAddBtn" style="background:var(--neon); color:#021214; width:100%; margin-top:8px;">Adicionar</button>
+        <button id="clxAddBtn" class="clxBtn" style="background:var(--neon);color:#021214;width:100%;margin-top:8px;">Adicionar</button>
       </div>
-      <hr style="border-color:rgba(255,255,255,0.06); margin:12px 0;">
+      <hr style="border-color:rgba(255,255,255,0.06);margin:10px 0;">
       <div>
         <strong>Minha conta (logado)</strong><br>
         <input id="clxChangePass" placeholder="Nova senha (sua)">
-        <button class="clxBtn" id="clxChangeMyPassBtn" style="background:#ffaa00; width:100%; margin-top:8px;">Trocar minha senha</button>
+        <button id="clxChangeMyPassBtn" class="clxBtn" style="background:#ffaa00;width:100%;margin-top:8px;">Trocar minha senha</button>
       </div>
-      <button id="clxCloseAdmin" style="width:100%; margin-top:12px; background:#ff3747; color:white; padding:8px; border-radius:8px; border:none;">Fechar painel</button>
+      <button id="clxCloseAdmin" style="width:100%;margin-top:12px;background:#ff3747;color:white;padding:8px;border-radius:8px;border:none;">Fechar painel</button>
     </div>
   </div>
 
-  <!-- SEU SITE (OCULTO ATÉ LOGIN) -->
+  <!-- YOUR SITE (HIDDEN until login) -->
   <div id="clxSiteWrapper" style="display:none;">
-    <!-- === seu conteúdo original exatamente como pediu === -->
+    <!-- === site content start (kept exactly) === -->
     <h1>📅 Gerador de Planilha Personalizada — CLX</h1>
+
     <label for="ano">Ano:</label>
     <input id="ano" type="number" min="2000" max="2100" value="2025">
+
     <label>Selecione os meses:</label>
     <div class="months" id="meses"></div>
+
     <label for="qtdAbas">Quantidade de abas:</label>
     <input id="qtdAbas" type="number" min="1" max="12" value="1">
+
     <label>Colunas da planilha:</label>
     <div id="colunasContainer">
       <input type="text" value="Data">
@@ -176,21 +128,25 @@
       <input type="text" value="Atividade">
       <input type="text" value="Observações">
     </div>
+
     <button id="addColunaBtn" style="background:#0ea5e9;">+ Adicionar Coluna</button>
+
     <div class="modelos">
       <select id="modeloSelect"><option value="">-- Escolher modelo salvo --</option></select>
       <button id="salvarModeloBtn" style="background:#10b981;">Salvar Modelo</button>
-      <button id="carregarModeloBtn" style="background:#f59e0b; color:#000;">Carregar</button>
+      <button id="carregarModeloBtn" style="background:#f59e0b;color:#000;">Carregar</button>
       <button id="duplicarModeloBtn" style="background:#7c3aed;">Duplicar</button>
       <button id="excluirModeloBtn" style="background:#ef4444;">Excluir</button>
       <button id="exportarBtn" style="background:#06b6d4;">Exportar Modelos</button>
       <button id="importarBtn" style="background:#fb923c;">Importar Modelos</button>
       <input id="importFile" type="file" accept=".json" style="display:none">
     </div>
+
     <div class="modelos" style="margin-top:14px;">
       <button id="modeloSimplesBtn" style="background:#0d6efd;">Modelo Simples</button>
       <button id="modeloProBtn" style="background:#6610f2;">Modelo Profissional</button>
     </div>
+
     <div style="margin-top:12px;">
       <button id="gerarBtn">Gerar XLSX</button>
       <button id="previewBtn" style="background:#16a34a;">Ver Exemplo</button>
@@ -200,21 +156,21 @@
       <button id="pdfBtn" style="background:#ef4444;">📄 Exportar PDF</button>
       <button id="temaBtn" style="background:#0f172a;">🌙 Tema Escuro</button>
     </div>
+
     <div class="preview" id="preview"></div>
+
     <footer>✨ Criado por <strong>CLX</strong></footer>
-    <!-- === fim do seu conteúdo === -->
+    <!-- === site content end === -->
   </div>
 
-  <!-- SCRIPTS: AUTH+ADMIN (UNIFICADO) -->
+  <!-- AUTH + ADMIN SCRIPT -->
   <script>
     (function(){
-      const STORAGE_USERS = 'clx_users'; // { username: { pass, blocked, admin } }
+      const STORAGE_USERS = 'clx_users';
       const STORAGE_LOGGED = 'clx_logged';
-
       const DEFAULT_ADMIN = 'CLX';
       const DEFAULT_ADMIN_PASS = '02072007';
 
-      // elements
       const overlay = document.getElementById('clxLoginOverlay');
       const userInput = document.getElementById('clxUserInput');
       const passInput = document.getElementById('clxPassInput');
@@ -234,12 +190,11 @@
       const siteWrapper = document.getElementById('clxSiteWrapper');
       const logoutBtn = document.getElementById('clxLogoutBtn');
 
-      // load or init users
       function loadUsers(){
         const raw = localStorage.getItem(STORAGE_USERS);
         if(!raw){
           const initial = {};
-          initial[DEFAULT_ADMIN] = { pass: DEFAULT_ADMIN_PASS, blocked:false, admin:true };
+          initial[DEFAULT_ADMIN] = { pass: DEFAULT_ADMIN_PASS, bloqueado:false, admin:true };
           localStorage.setItem(STORAGE_USERS, JSON.stringify(initial));
           return initial;
         }
@@ -250,104 +205,111 @@
       let users = loadUsers();
 
       function getLogged(){ return localStorage.getItem(STORAGE_LOGGED) || null; }
-      function setLogged(u){ if(u) localStorage.setItem(STORAGE_LOGGED, u); else localStorage.removeItem(STORAGE_LOGGED); }
+      function setLogged(u){ if(u) localStorage.setItem(STORAGE_LOGGED,u); else localStorage.removeItem(STORAGE_LOGGED); }
 
       function renderUserList(){
         clxUserList.innerHTML = '';
-        const keys = Object.keys(users).sort((a,b) => a.localeCompare(b));
-        if(keys.length === 0){ clxUserList.innerHTML = '<div style="opacity:.6">Nenhum usuário cadastrado.</div>'; return; }
-        keys.forEach(u => {
+        const keys = Object.keys(users).sort((a,b)=>a.localeCompare(b));
+        if(keys.length===0){ clxUserList.innerHTML='<div style="opacity:.6">Nenhum usuário cadastrado.</div>'; return; }
+        keys.forEach(u=>{
           const info = users[u];
           const row = document.createElement('div');
           row.className = 'clxUserRow' + (info.bloqueado ? ' blocked' : '');
           row.innerHTML = `
             <div style="flex:1;">
-              <strong>${u}</strong><div style="font-size:12px; opacity:0.8">${info.admin ? 'Administrador' : 'Usuário'}</div>
+              <strong>${u}</strong><div style="font-size:12px;opacity:0.8">${info.admin ? 'Administrador' : 'Usuário'}</div>
             </div>
-            <div style="display:flex; gap:6px; align-items:center;">
-              <button title="Editar senha" class="clxBtn edit" data-user="${u}">✏️</button>
-              <button title="${info.bloqueado ? 'Desbloquear' : 'Bloquear'}" class="clxBtn block" data-user="${u}">${info.bloqueado ? '🔓' : '🔒'}</button>
-              <button title="Excluir" class="clxBtn delete" data-user="${u}">❌</button>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <button class="clxBtn edit" data-user="${u}">✏️</button>
+              <button class="clxBtn block" data-user="${u}">${info.bloqueado ? '🔓' : '🔒'}</button>
+              <button class="clxBtn delete" data-user="${u}">❌</button>
             </div>
           `;
           clxUserList.appendChild(row);
         });
 
-        // attach events
-        clxUserList.querySelectorAll('.clxBtn.edit').forEach(btn => {
-          btn.onclick = () => {
+        clxUserList.querySelectorAll('.clxBtn.edit').forEach(btn=>{
+          btn.onclick = ()=>{
             const u = btn.dataset.user;
             const nova = prompt('Nova senha para ' + u + ' (deixe em branco para cancelar)');
-            if(nova === null || nova.trim() === '') return;
+            if(nova===null || nova.trim()==='') return;
             users[u].pass = nova;
             saveUsers(users);
             alert('Senha alterada para ' + u);
             renderUserList();
           };
         });
-        clxUserList.querySelectorAll('.clxBtn.block').forEach(btn => {
-          btn.onclick = () => {
+
+        clxUserList.querySelectorAll('.clxBtn.block').forEach(btn=>{
+          btn.onclick = ()=>{
             const u = btn.dataset.user;
             if(u === DEFAULT_ADMIN){ alert('Não é possível bloquear o admin principal.'); return; }
             users[u].bloqueado = !users[u].bloqueado;
-            saveUsers(users); renderUserList();
+            saveUsers(users);
+            renderUserList();
           };
         });
-        clxUserList.querySelectorAll('.clxBtn.delete').forEach(btn => {
-          btn.onclick = () => {
+
+        clxUserList.querySelectorAll('.clxBtn.delete').forEach(btn=>{
+          btn.onclick = ()=>{
             const u = btn.dataset.user;
             if(u === DEFAULT_ADMIN){ alert('Não é possível excluir o admin principal.'); return; }
             if(!confirm('Excluir usuário ' + u + '?')) return;
-            delete users[u]; saveUsers(users); renderUserList();
+            delete users[u];
+            saveUsers(users);
+            renderUserList();
           };
         });
       }
 
       function adminAddUser(){
-        const u = (clxNewUser.value || '').trim();
-        const p = (clxNewPass.value || '').trim();
+        const u = (clxNewUser.value||'').trim();
+        const p = (clxNewPass.value||'').trim();
         if(!u || !p) return alert('Preencha usuário e senha.');
         if(users[u]) return alert('Usuário já existe.');
         users[u] = { pass:p, bloqueado:false, admin:false };
-        saveUsers(users); clxNewUser.value=''; clxNewPass.value=''; renderUserList();
+        saveUsers(users);
+        clxNewUser.value=''; clxNewPass.value='';
+        renderUserList();
         alert('Usuário adicionado: ' + u);
       }
 
       function changeMyPassword(){
         const logged = getLogged();
         if(!logged) return alert('Nenhum usuário logado.');
-        const nova = (clxChangePass.value || '').trim();
+        const nova = (clxChangePass.value||'').trim();
         if(!nova) return alert('Digite a nova senha.');
-        users[logged].pass = nova; saveUsers(users); clxChangePass.value=''; alert('Sua senha foi alterada.');
+        users[logged].pass = nova;
+        saveUsers(users);
+        clxChangePass.value='';
+        alert('Sua senha foi alterada.');
       }
 
       function attemptLogin(){
-        const u = (userInput.value || '').trim();
-        const p = (passInput.value || '').trim();
+        const u = (userInput.value||'').trim();
+        const p = (passInput.value||'').trim();
         const remember = rememberCheck.checked;
         if(!u || !p){ loginError.style.display='block'; loginError.textContent='Preencha usuário e senha.'; return; }
         const info = users[u];
         if(!info || info.pass !== p){ loginError.style.display='block'; loginError.textContent='Usuário ou senha incorretos.'; return; }
         if(info.bloqueado){ loginError.style.display='block'; loginError.textContent='Usuário bloqueado pelo administrador.'; return; }
 
-        // sucesso
+        // success
         setLogged(u);
         overlay.style.display='none';
         document.body.classList.remove('login-active');
-        loginError.style.display='none';
 
-        // show site and set white background
+        // show site wrapper and set white background
         siteWrapper.style.display='block';
-        document.body.style.background='#ffffff';
+        document.body.style.background = '#ffffff';
         document.body.classList.add('site-visible');
-        document.body.style.color='#0b1220';
-        logoutBtn.style.display='inline-block';
+        document.body.style.color = '#0b1220';
+        logoutBtn.style.display = 'inline-block';
 
-        // remember login?
         if(remember){ localStorage.setItem('clx_remember_user', u); } else { localStorage.removeItem('clx_remember_user'); }
 
-        // show gear for admin users
-        if(info.admin){ gear.style.display='block'; } else { gear.style.display='none'; }
+        // show gear only for admin (CLX is default admin)
+        if(info.admin) gear.style.display = 'block'; else gear.style.display = 'none';
       }
 
       function clxLogout(){
@@ -356,45 +318,52 @@
         location.reload();
       }
 
-      // init
       (function init(){
         document.body.classList.add('login-active');
-        // load users again (in case storage changed externally)
         users = loadUsers();
 
         const logged = getLogged();
         if(logged && users[logged]){
-          if(users[logged].bloqueado){ setLogged(null); overlay.style.display='flex'; siteWrapper.style.display='none'; }
-          else { overlay.style.display='none'; siteWrapper.style.display='block'; document.body.style.background='#ffffff'; document.body.classList.add('site-visible'); logoutBtn.style.display='inline-block'; if(users[logged].admin) gear.style.display='block'; }
+          if(users[logged].bloqueado){
+            setLogged(null);
+            overlay.style.display='flex';
+            siteWrapper.style.display='none';
+          } else {
+            overlay.style.display='none';
+            siteWrapper.style.display='block';
+            document.body.style.background = '#ffffff';
+            document.body.classList.add('site-visible');
+            document.body.style.color = '#0b1220';
+            logoutBtn.style.display = 'inline-block';
+            if(users[logged].admin) gear.style.display = 'block';
+          }
         } else {
-          overlay.style.display='flex'; siteWrapper.style.display='none';
-          // prefill remember
+          overlay.style.display='flex';
+          siteWrapper.style.display='none';
           const remembered = localStorage.getItem('clx_remember_user');
           if(remembered){ userInput.value = remembered; rememberCheck.checked = true; }
         }
 
         // events
         loginBtn.onclick = attemptLogin;
-        passInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') attemptLogin(); });
-        userInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') passInput.focus(); });
+        passInput.addEventListener('keydown', e=>{ if(e.key==='Enter') attemptLogin(); });
+        userInput.addEventListener('keydown', e=>{ if(e.key==='Enter') passInput.focus(); });
 
         gear.onclick = ()=>{ adminModal.style.display='flex'; renderUserList(); };
         adminClose.onclick = ()=>{ adminModal.style.display='none'; };
         clxAddBtn.onclick = adminAddUser;
         clxChangeMyPassBtn.onclick = changeMyPassword;
 
-        // gear double-click = logout (convenience)
-        gear.ondblclick = ()=>{ if(confirm('Deseja sair (logout)?')){ clxLogout(); } };
+        gear.ondblclick = ()=>{ if(confirm('Deseja sair (logout)?')) clxLogout(); };
 
-        // expose for debug
+        // debug helper
         window.CLX_auth = { usersRef: users, reloadUsers: ()=>{ users = loadUsers(); renderUserList(); }, logout: clxLogout };
       })();
     })();
   </script>
 
-  <!-- ===================== SEU JS ORIGINAL (Gerador de Planilhas) ===================== -->
+  <!-- ORIGINAL JS (Gerador de planilhas) - unchanged but fixed templates -->
   <script>
-    /* ---------- Setup meses ---------- */
     const nomesMeses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
     const mesesDiv = document.getElementById("meses");
     nomesMeses.forEach((m,i) => {
@@ -437,7 +406,6 @@
       input.scrollIntoView({behavior:"smooth", block:"nearest"});
     });
 
-    /* ---------- Modelos (localStorage) ---------- */
     const modeloSelect = document.getElementById("modeloSelect");
     function atualizarListaModelos(){
       modeloSelect.innerHTML = `<option value="">-- Escolher modelo salvo --</option>`;
@@ -510,7 +478,6 @@
       reader.readAsText(f);
     });
 
-    /* Modelos prontos */
     document.getElementById("modeloSimplesBtn").addEventListener("click", () => {
       const c = document.getElementById("colunasContainer"); c.innerHTML = "";
       ["Data","Dia da Semana","Descrição"].forEach(x => { const i=document.createElement("input"); i.type="text"; i.value=x; c.appendChild(i); });
@@ -522,7 +489,6 @@
       alert("Modelo Profissional carregado!");
     });
 
-    /* ---------- Estilos e utilitários XLSX (usando xlsx-js-style) ---------- */
     function calcularLarguras(dados) {
       const maxCol = dados[0] ? dados[0].length : 0;
       const larg = new Array(maxCol).fill(0);
@@ -572,7 +538,6 @@
       ws['!pane'] = { xSplit: 0, ySplit: 1, topLeftCell: "A2", activePane: "bottomLeft", state: "frozen" };
     }
 
-    /* Flags controláveis por botões */
     let aplicarBordasFlag = false;
     let congelarCabecalhoFlag = false;
     let darkMode = false;
@@ -589,14 +554,12 @@
       alert(congelarCabecalhoFlag ? "Primeira linha será congelada no XLSX." : "Congelamento desativado.");
     });
 
-    /* Tema */
     document.getElementById("temaBtn").addEventListener("click", () => {
       darkMode = !darkMode;
       document.body.classList.toggle("dark", darkMode);
       document.getElementById("temaBtn").textContent = darkMode ? "☀️ Tema Claro" : "🌙 Tema Escuro";
     });
 
-    /* ---------- Gerar XLSX ---------- */
     function gerarPlanilha(ano, meses, qtdAbas){
       const colunas = pegarColunas();
       if(colunas.length === 0) return alert("Adicione ao menos uma coluna antes de gerar.");
@@ -648,7 +611,6 @@
       alert("Arquivo XLSX gerado!");
     }
 
-    /* ---------- Preview + Grade (visual) + PDF ---------- */
     function mostrarExemplo(ano, meses){
       const preview = document.getElementById("preview");
       preview.innerHTML = "";
@@ -710,7 +672,7 @@
       win.document.close();
       win.print();
     });
-    /* ---------- Botões principais ---------- */
+
     document.getElementById("gerarBtn").addEventListener("click", () => {
       const ano = parseInt(document.getElementById("ano").value);
       const meses = mesesSelecionados();
@@ -718,12 +680,14 @@
       if(!meses.length) return alert("Selecione pelo menos um mês!");
       gerarPlanilha(ano, meses, qtdAbas);
     });
+
     document.getElementById("previewBtn").addEventListener("click", () => {
       const ano = parseInt(document.getElementById("ano").value);
       const meses = mesesSelecionados();
       mostrarExemplo(ano, meses);
     });
-    /* Inicializa estado visual do botão (opcional) */
+
+    // initial labels for smaller UI
     document.getElementById("bordasBtn").textContent = "Bordas Excel";
     document.getElementById("congelarBtn").textContent = "Congelar Cabeçalho";
     document.getElementById("temaBtn").textContent = "🌙 Tema Escuro";
